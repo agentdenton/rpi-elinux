@@ -2,8 +2,10 @@
 
 ## Overview
 
-This repository contains notes on how to make Raspberry Pi Zero W work with
-u-boot. It's based on this awesome tutorial:
+This is a tutorial on how to setup minimalistic Linux system on Raspberry Pi
+Zero W from scratch with u-boot and busybox.
+
+It's based on this awesome tutorial:
 https://hechao.li/2021/12/20/Boot-Raspberry-Pi-4-Using-uboot-and-Initramfs/
 
 ## Docker Setup
