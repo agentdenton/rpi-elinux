@@ -65,7 +65,7 @@ index 5e5eb71100..3be7f4b0a5 100755
  set -u
  set -e
 
-+BOARD_DIR="$(basename $(pwd))"
++BOARD_DIR="$BR2_EXTERNAL/board/rpi0w"
 +MKIMAGE="$HOST_DIR/bin/mkimage"
 +
  if [ -e ${TARGET_DIR}/etc/inittab ]; then
