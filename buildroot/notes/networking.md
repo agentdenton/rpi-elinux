@@ -66,8 +66,7 @@ adding the following commands to the `inittab`:
 
 ```
 ::once:/sbin/ip link set wlan0 up
-::once:/usr/sbin/wpa_supplicant -B -D nl80211 -i wlan0 -c
-/etc/wpa_supplicant.conf
+::once:/usr/sbin/wpa_supplicant -B -D nl80211 -i wlan0 -c /etc/wpa_supplicant.conf
 ```
 
 Try pinging your router. If it doesn't respond, attempt to acquire an IP
