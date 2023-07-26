@@ -1,4 +1,0 @@
-config BR2_PACKAGE_RPI0W_LED
-	bool "rpi0w-led"
-	help
-		The program to blink an external LED

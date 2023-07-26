@@ -1,0 +1,18 @@
+BMP280_I2C_VERSION = 0.1
+BMP280_I2C_SITE = $(BR2_EXTERNAL_RPI0W_PACKAGES_PATH)/package/bmp280-i2c/src
+BMP280_I2C_SITE_METHOD = local
+BMP280_I2C_LICENSE = MIT
+BMP280_I2C_LICENSE_FILES = COPYING
+BMP280_I2C_MODULE_NAME := bmp280-i2c.ko
+
+define BMP280_I2C_BUILD_CMDS
+    $(MAKE) -C $(LINUX_DIR) M=$(@D) modules
+endef
+
+define BMP280_I2C_INSTALL_TARGET_CMDS
+    $(INSTALL) -D -m 0755 $(@D)/$(BMP280_I2C_MODULE_NAME) \
+		$(TARGET_DIR)/lib/modules/$(BMP280_I2C_MODULE_NAME)
+endef
+
+$(eval $(kernel-module))
+$(eval $(generic-package))

@@ -1,0 +1,4 @@
+config BR2_PACKAGE_RPI0W_LED_KERN
+	bool "rpi0w-led-kern"
+	help
+		Linux driver to control an external LED on rpi0w
