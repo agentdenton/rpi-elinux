@@ -1,4 +1,4 @@
 config BR2_PACKAGE_RPI0W_LED_USER
 	bool "rpi0w-led-user"
 	help
-		A userspace program to use an external LED on rpi0w
+	  A userspace program to use an external LED on rpi0w

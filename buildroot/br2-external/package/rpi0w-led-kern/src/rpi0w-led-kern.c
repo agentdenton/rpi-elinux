@@ -11,8 +11,8 @@ static struct gpio_desc *led_pin_desc;
 
 static void blink_timer_cb(struct timer_list __maybe_unused *list)
 {
-    int val = gpiod_get_value(led_pin_desc);
-    gpiod_set_value(led_pin_desc, !val);
+	int val = gpiod_get_value(led_pin_desc);
+	gpiod_set_value(led_pin_desc, !val);
 	mod_timer(&tim, jiffies + msecs_to_jiffies(BLINK_INTERVAL_MS));
 }
 
@@ -36,10 +36,10 @@ static int rpi0w_led_probe(struct platform_device *pdev)
 
 static int rpi0w_led_remove(struct platform_device *pdev)
 {
-    if (led_pin_desc != NULL) {
-        del_timer_sync(&tim);
-    }
-    return 0;
+	if (led_pin_desc != NULL) {
+		del_timer_sync(&tim);
+	}
+	return 0;
 }
 
 static const struct of_device_id rpi0w_led_of_match[] = {
