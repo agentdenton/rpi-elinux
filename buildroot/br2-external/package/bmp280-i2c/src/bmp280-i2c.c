@@ -6,8 +6,6 @@
 #include "linux/timer.h"
 #include "linux/ftrace.h"
 
-a
-
 #define BMP280_ID_REG_ADDR 0xD0
 
 #define BMP280_RESET_REG_ADDR 0xE0
