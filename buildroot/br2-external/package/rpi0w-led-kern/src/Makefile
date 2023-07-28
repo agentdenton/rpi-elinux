@@ -1,7 +1,7 @@
 obj-m += rpi0w-led-kern.o
 
 all:
-	make -C $(LINUX_DIR) M=$(CURDIR) modules
+	$(MAKE) -C $(KDIR) M=$(shell pwd) modules
 
 clean:
-	make -C $(LINUX_DIR) M=$(CURDIR) clean
+	$(MAKE) -C $(KDIR) M=$(shell pwd) clean

@@ -1,3 +1,4 @@
 menu "Rpi0w external packages"
 	source "$BR2_EXTERNAL_RPI0W_PACKAGES_PATH/package/rpi0w-led-user/Config.in"
+	source "$BR2_EXTERNAL_RPI0W_PACKAGES_PATH/package/rpi0w-led-kern/Config.in"
 endmenu
