@@ -31,6 +31,14 @@ null::sysinit:/bin/ln -sf /proc/self/fd/2 /dev/stderr
 ::sysinit:/sbin/modprobe brcmutil.ko
 ::sysinit:/sbin/modprobe brcmfmac.ko
 
+# WORKAROUND: Change permissions to pre-generated ssh keys.
+# This is necessary because rsync, used for copying the rootfs overlay,
+# cannot handle files with root ownership and strict permissions.
+# These commands fix the permissions post-deployment during the first boot.
+::sysinit:/bin/chmod 0600 /etc/ssh/ssh_host_ecdsa_key
+::sysinit:/bin/chmod 0600 /etc/ssh/ssh_host_ed25519_key
+::sysinit:/bin/chmod 0600 /etc/ssh/ssh_host_rsa_key
+
 # now run any rc scripts
 ::sysinit:/etc/init.d/rcS
 
