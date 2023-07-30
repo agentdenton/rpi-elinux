@@ -20,7 +20,7 @@ static int rpi0w_led_probe(struct platform_device *pdev)
 {
 	led_pin_desc = devm_gpiod_get(&pdev->dev, "rpi0w-led", GPIOD_OUT_HIGH);
 	if (IS_ERR(led_pin_desc)) {
-		dev_err(&pdev->dev, "Failed to acquire the gpio descriptor");
+		dev_err(&pdev->dev, "Failed to acquire the gpio descriptor\n");
 		return PTR_ERR(led_pin_desc);
 	}
 
@@ -30,7 +30,7 @@ static int rpi0w_led_probe(struct platform_device *pdev)
 	timer_setup(&tim, blink_timer_cb, 0);
 	mod_timer(&tim, jiffies + msecs_to_jiffies(BLINK_INTERVAL_MS));
 
-	dev_notice(&pdev->dev, "Configured the rpi0w-led gpio");
+	dev_notice(&pdev->dev, "Configured the rpi0w-led gpio\n");
 	return 0;
 }
 
