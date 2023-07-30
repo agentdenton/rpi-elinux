@@ -57,3 +57,5 @@ static struct platform_driver rpi0w_led_driver = {
 };
 
 module_platform_driver(rpi0w_led_driver);
+
+MODULE_LICENSE("GPL");
