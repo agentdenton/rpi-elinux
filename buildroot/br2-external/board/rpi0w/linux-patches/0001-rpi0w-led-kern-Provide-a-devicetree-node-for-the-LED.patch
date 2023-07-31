@@ -1,0 +1,29 @@
+From 42342367980ee45c1637c6afd9617870c962e8cb Mon Sep 17 00:00:00 2001
+From: Andy Brychenko <andybrychenko@gmail.com>
+Date: Sun, 30 Jul 2023 22:31:06 +0300
+Subject: [PATCH] rpi0w-led-kern: Provide a devicetree node for the LED gpio
+
+---
+ arch/arm/boot/dts/bcm2708-rpi-zero-w.dts | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/arch/arm/boot/dts/bcm2708-rpi-zero-w.dts b/arch/arm/boot/dts/bcm2708-rpi-zero-w.dts
+index d72c6bc7c963..e07bd20de7d5 100644
+--- a/arch/arm/boot/dts/bcm2708-rpi-zero-w.dts
++++ b/arch/arm/boot/dts/bcm2708-rpi-zero-w.dts
+@@ -19,6 +19,12 @@ aliases {
+ 		serial1 = &uart0;
+ 		mmc1 = &mmcnr;
+ 	};
++
++	rpi0w-led {
++		compatible = "rpi0w-led";
++		status = "okay";
++		gpios = <&gpio 4 GPIO_ACTIVE_HIGH>;
++	};
+ };
+ 
+ &gpio {
+-- 
+2.41.0
+
