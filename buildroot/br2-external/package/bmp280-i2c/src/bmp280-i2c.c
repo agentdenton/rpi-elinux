@@ -356,3 +356,4 @@ static void __exit bmp280_exit(void)
 
 module_init(bmp280_init);
 module_exit(bmp280_exit);
+MODULE_LICENSE("GPL");
