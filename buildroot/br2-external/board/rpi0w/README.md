@@ -1,6 +1,6 @@
 ### Setup WIFI password
 
-Replace `*******` with correct credentials:
+Replace `*******` inside the `wpa_supplicant.conf` with correct credentials:
 
 ```
 network={
