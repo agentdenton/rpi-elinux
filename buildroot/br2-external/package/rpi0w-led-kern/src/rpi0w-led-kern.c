@@ -18,7 +18,7 @@ static void blink_timer_cb(struct timer_list __maybe_unused *list)
 
 static int rpi0w_led_probe(struct platform_device *pdev)
 {
-	led_pin_desc = devm_gpiod_get(&pdev->dev, "rpi0w-led", GPIOD_OUT_HIGH);
+	led_pin_desc = devm_gpiod_get(&pdev->dev, NULL, GPIOD_OUT_HIGH);
 	if (IS_ERR(led_pin_desc)) {
 		dev_err(&pdev->dev, "Failed to acquire the gpio descriptor\n");
 		return PTR_ERR(led_pin_desc);
