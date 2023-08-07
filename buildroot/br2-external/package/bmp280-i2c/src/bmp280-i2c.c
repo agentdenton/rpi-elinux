@@ -11,11 +11,12 @@
 #define BMP280_RESET 0xB6
 
 #define BMP280_CTRL_MEAS_REG_ADDR 0xF4
-#define BMP280_CTRL_MEAS_TEMP_OVERSAMPLING 0x1C
+#define BMP280_CTRL_MEAS_TEMP_OVERSAMPLING 0xE0
 #define BMP280_CTRL_MEAS_MODE 0x03
 
 #define BMP280_CONFIG_REG_ADDR 0xF5
 #define BMP280_CONFIG_FILTER 0x1C
+#define BMP280_CONFIG_STANDBY_TIME 0xE0
 
 #define BMP280_STATUS_REG_ADDR 0xF3
 #define BMP280_STATUS_MEASURING (1 << 3U)
@@ -28,30 +29,41 @@
 
 #define BMP280_ID 0x58
 
-#define READ_TEMP_INTERVAL_MS 500U
+#define READ_TEMP_INTERVAL_MS 1000U
 
 
 typedef enum {
-    BMP280_MODE_SLEEP   = 0x00,
-    BMP280_MODE_FORCED  = 0x01,
-    BMP280_MODE_NORMAL  = 0x03,
+    BMP280_STANDBY_0_5    = 0b000 << 5,
+    BMP280_STANDBY_62_5   = 0b001 << 5,
+    BMP280_STANDBY_125    = 0b010 << 5,
+    BMP280_STANDBY_250    = 0b011 << 5,
+    BMP280_STANDBY_500    = 0b100 << 5,
+    BMP280_STANDBY_1000   = 0b101 << 5,
+    BMP280_STANDBY_2000   = 0b110 << 5,
+    BMP280_STANDBY_4000   = 0b111 << 5,
+} BMP280StandbyTime;
+
+typedef enum {
+    BMP280_MODE_SLEEP   = 0b00,
+    BMP280_MODE_FORCED  = 0b01,
+    BMP280_MODE_NORMAL  = 0b11,
 } BMP280Mode;
 
 typedef enum {
-    BMP280_OVERSAMPLING_SKIPPED = 0b000,
-    BMP280_OVERSAMPLING_1       = 0b001,
-    BMP280_OVERSAMPLING_2       = 0b010,
-    BMP280_OVERSAMPLING_4       = 0b011,
-    BMP280_OVERSAMPLING_8       = 0b100,
-    BMP280_OVERSAMPLING_16      = 0b101,
+    BMP280_OVERSAMPLING_SKIPPED = 0b000 << 5,
+    BMP280_OVERSAMPLING_1       = 0b001 << 5,
+    BMP280_OVERSAMPLING_2       = 0b010 << 5,
+    BMP280_OVERSAMPLING_4       = 0b011 << 5,
+    BMP280_OVERSAMPLING_8       = 0b100 << 5,
+    BMP280_OVERSAMPLING_16      = 0b101 << 5,
 } BMP280Ovrsmpl;
 
 typedef enum {
-    BMP280_FILTER_OFF       = 0b000,
-    BMP280_FILTER_COEFF_2   = 0b001,
-    BMP280_FILTER_COEFF_4   = 0b010,
-    BMP280_FILTER_COEFF_8   = 0b011,
-    BMP280_FILTER_COEFF_16  = 0b100,
+    BMP280_FILTER_OFF       = 0b000 << 2,
+    BMP280_FILTER_COEFF_2   = 0b001 << 2,
+    BMP280_FILTER_COEFF_4   = 0b010 << 2,
+    BMP280_FILTER_COEFF_8   = 0b011 << 2,
+    BMP280_FILTER_COEFF_16  = 0b100 << 2,
 } BMP280FiltCoeff;
 
 typedef struct {
@@ -200,6 +212,32 @@ static ssize_t bmp280_get_status(BMP280Device *bmp_dev)
     return status;
 }
 
+static int bmp280_set_standby_time(BMP280Device *bmp_dev, BMP280StandbyTime t)
+{
+    int ret;
+
+    if (t < BMP280_STANDBY_0_5 || t > BMP280_STANDBY_4000) {
+        dev_err(
+            &bmp_dev->client->dev,
+            "Invalid standby time value: 0x%x\n",
+            t
+        );
+        return -1;
+    }
+    ret = bmp280_modify(
+        bmp_dev,
+        BMP280_CONFIG_REG_ADDR,
+        BMP280_CONFIG_STANDBY_TIME,
+        t
+    );
+    if (ret < 0) {
+        dev_err(&bmp_dev->client->dev, "Failed to set standby time\n");
+        return -1;
+    }
+
+    return 0;
+}
+
 static int bmp280_set_power_mode(BMP280Device *bmp_dev, BMP280Mode mode)
 {
     int ret;
@@ -296,8 +334,13 @@ static int bmp280_set_filter_coeff(
 }
 
 static void bmp280_init(BMP280Device *bmp_dev) {
+    // Reset the sensor before initialization
+    bmp280_reset(bmp_dev);
+
     bmp280_set_oversampling(bmp_dev, BMP280_OVERSAMPLING_1);
-    bmp280_set_filter_coeff(bmp_dev, BMP280_FILTER_OFF);
+    bmp280_set_filter_coeff(bmp_dev, BMP280_FILTER_COEFF_16);
+    bmp280_set_standby_time(bmp_dev, BMP280_STANDBY_500);
+    bmp280_set_power_mode(bmp_dev, BMP280_MODE_NORMAL);
 }
 
 static ssize_t bmp280_read_temp_blocking(BMP280Device *bmp_dev)
@@ -334,17 +377,17 @@ static ssize_t bmp280_read_temp_blocking(BMP280Device *bmp_dev)
 
     temp = (temp_data[0] << 12) // msb
             | (temp_data[1] << 4) // lsb
-            | (temp_data[2] & BMP280_TEMP_XSLB); // xlsb
+            | (temp_data[2] >> 4); // xlsb
     temp &= temp_mask;
 
-    dev_notice(&bmp_dev->client->dev, "Raw Temp: %d", temp);
+    dev_notice(&bmp_dev->client->dev, "Raw Temp: %d\n", temp);
     return temp;
 }
 
 static void bmp280_work_cb(struct work_struct *w)
 {
     BMP280Device *bmp_dev = container_of(w, BMP280Device, work);
-    ssize_t raw_temp;
+    ssize_t raw_temp = 0;
 
     raw_temp = bmp280_read_temp_blocking(bmp_dev);
     if (raw_temp < 0) {
@@ -353,6 +396,7 @@ static void bmp280_work_cb(struct work_struct *w)
     }
 
     bmp_dev->raw_temp = raw_temp;
+
     mod_timer(&bmp_dev->tim, jiffies + msecs_to_jiffies(READ_TEMP_INTERVAL_MS));
     return;
 
@@ -379,16 +423,13 @@ static int bmp280_probe(struct i2c_client *client)
     i2c_set_clientdata(client, bmp_dev);
     bmp_dev->client = client;
 
-    // Reset the sensor before initialization
-    bmp280_reset(bmp_dev);
-
     if (bmp280_get_id(bmp_dev) != BMP280_ID) {
         dev_err(&bmp_dev->client->dev, "Invalid ID\n");
         goto err;
     }
 
     bmp280_init(bmp_dev);
-    dev_info(&bmp_dev->client->dev, "Initialized the bmp280 sensor");
+    dev_info(&bmp_dev->client->dev, "Initialized the bmp280 sensor\n");
 
     timer_setup(&bmp_dev->tim, bmp280_timer_cb, 0);
     mod_timer(
