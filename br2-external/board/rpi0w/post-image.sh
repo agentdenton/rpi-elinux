@@ -3,9 +3,9 @@
 set -e
 set -u
 
-BOARD_DIR="$HOME/rpi0w-examples/buildroot/br2-external/board/rpi0w"
-GENIMAGE_CFG="${BOARD_DIR}/genimage.cfg"
-GENIMAGE_TMP="${BUILD_DIR}/genimage.tmp"
+BOARD_DIR="$HOME/br2-external/board/rpi0w"
+GENIMAGE_CFG="$BOARD_DIR/genimage.cfg"
+GENIMAGE_TMP="$BUILD_DIR/genimage.tmp"
 
 # Pass an empty rootpath. genimage makes a full copy of the given rootpath to
 # ${GENIMAGE_TMP}/root so passing TARGET_DIR would be a waste of time and disk
