@@ -27,6 +27,8 @@
 #define BMP280_TEMP_XSLB_REG_ADDR 0xFC
 #define BMP280_TEMP_XSLB 0xF0
 
+#define BMP280_CALIB00_REG_ADDR 0x88
+
 #define BMP280_ID 0x58
 
 #define READ_TEMP_INTERVAL_MS 1000U
@@ -67,12 +69,19 @@ typedef enum {
 } BMP280FiltCoeff;
 
 typedef struct {
+    u16 dig_t1;
+    s16 dig_t2;
+    s16 dig_t3;
+} BMP280CalibParam;
+
+typedef struct {
     struct i2c_client *client;
     struct timer_list tim;
     struct work_struct work;
 
     BMP280FiltCoeff filt_coeff;
     BMP280Ovrsmpl oversampling;
+    BMP280CalibParam params;
 
     u32 raw_temp;
 } BMP280Device;
@@ -324,12 +333,39 @@ static int bmp280_set_filter_coeff(
     if (ret < 0) {
         dev_err(
             &bmp_dev->client->dev,
-            "Failed to set oversmapling to 0x%x\n",
+            "Failed to set oversampling to 0x%x\n",
             coeff
         );
         return -1;
     }
 
+    return 0;
+}
+
+static ssize_t bmp280_populate_calib_params(BMP280Device *bmp_dev)
+{
+#define CALIB_PARAM_BUF_LEN 6
+    BMP280CalibParam *params = &bmp_dev->params;
+    uint8_t buf[CALIB_PARAM_BUF_LEN];
+    int ret;
+
+    ret = bmp280_read_range(
+        bmp_dev,
+        BMP280_CALIB00_REG_ADDR,
+        buf,
+        CALIB_PARAM_BUF_LEN
+    );
+    if (ret < 0) {
+        dev_err(
+            &bmp_dev->client->dev,
+            "Failed to read temperature calibration parameters\n"
+        );
+        return -1;
+    }
+
+    params->dig_t1 = (uint16_t)(buf[1] << 8) | buf[0];
+    params->dig_t2 = (int16_t)(buf[3] << 8) | buf[2];
+    params->dig_t3 = (int16_t)(buf[5] << 8) | buf[4];
     return 0;
 }
 
@@ -341,6 +377,8 @@ static void bmp280_init(BMP280Device *bmp_dev) {
     bmp280_set_filter_coeff(bmp_dev, BMP280_FILTER_COEFF_16);
     bmp280_set_standby_time(bmp_dev, BMP280_STANDBY_500);
     bmp280_set_power_mode(bmp_dev, BMP280_MODE_NORMAL);
+
+    bmp280_populate_calib_params(bmp_dev);
 }
 
 static ssize_t bmp280_read_temp_blocking(BMP280Device *bmp_dev)
