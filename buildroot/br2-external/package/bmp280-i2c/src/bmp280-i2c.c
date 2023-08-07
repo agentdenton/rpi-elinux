@@ -24,7 +24,7 @@
 #define BMP280_TEMP_MSB_REG_ADDR 0xFA
 #define BMP280_TEMP_LSB_REG_ADDR 0xFB
 #define BMP280_TEMP_XSLB_REG_ADDR 0xFC
-#define BMP280_TEMP_XSLB 0xF0 // mask for the temperature bits
+#define BMP280_TEMP_XSLB 0xF0
 
 #define BMP280_ID 0x58
 
@@ -32,10 +32,10 @@
 
 
 typedef enum {
-    BMP280_MODE_SLEEP   = 0x0,
-    BMP280_MODE_FORCED  = 0x1,
-    BMP280_MODE_NORMAL  = 0x3,
-} BMP280_Mode;
+    BMP280_MODE_SLEEP   = 0x00,
+    BMP280_MODE_FORCED  = 0x01,
+    BMP280_MODE_NORMAL  = 0x03,
+} BMP280Mode;
 
 typedef enum {
     BMP280_OVERSAMPLING_SKIPPED = 0b000,
@@ -44,7 +44,7 @@ typedef enum {
     BMP280_OVERSAMPLING_4       = 0b011,
     BMP280_OVERSAMPLING_8       = 0b100,
     BMP280_OVERSAMPLING_16      = 0b101,
-} BMP280_Ovrsmpl;
+} BMP280Ovrsmpl;
 
 typedef enum {
     BMP280_FILTER_OFF       = 0b000,
@@ -52,352 +52,365 @@ typedef enum {
     BMP280_FILTER_COEFF_4   = 0b010,
     BMP280_FILTER_COEFF_8   = 0b011,
     BMP280_FILTER_COEFF_16  = 0b100,
-} BMP280_FiltCoeff;
-
-typedef struct {
-    BMP280_Ovrsmpl ovrsmpl;
-    BMP280_FiltCoeff coeff;
-} BMP280_Config;
+} BMP280FiltCoeff;
 
 typedef struct {
     struct i2c_client *client;
     struct timer_list tim;
     struct work_struct work;
-    BMP280_Config config;
+
+    BMP280FiltCoeff filt_coeff;
+    BMP280Ovrsmpl oversampling;
+
     u32 raw_temp;
-} BMP280_Device;
+} BMP280Device;
 
 
-static int bmp280_read_reg(struct i2c_client *client, u8 reg_addr)
+static ssize_t bmp280_read(BMP280Device *bmp_dev, u8 reg_addr)
 {
-    u8 rd, wr;
-    int ret;
+    struct i2c_client *client = bmp_dev->client;
+    u8 recv;
+    ssize_t ret;
 
-    wr = reg_addr;
-    ret = i2c_master_send(client, &wr, 1);
+    ret = i2c_master_send(client, &reg_addr, 1);
     if (ret < 0) {
-        dev_err(&client->dev, "Failed to select 0x%x register\n", reg_addr);
-        return ret;
+        dev_err(&client->dev, "Failed to select the 0x%x register\n", reg_addr);
+        return -1;
     }
 
-    ret = i2c_master_recv(client, &rd, 1);
+    ret = i2c_master_recv(bmp_dev->client, &recv, 1);
     if (ret < 0) {
-        dev_err(&client->dev, "Failed to read 0x%x register\n", reg_addr);
-        return ret;
+        dev_err(&client->dev, "Failed to read the 0x%x register\n", reg_addr);
+        return -1;
     }
 
-    return rd;
+    return recv;
 }
 
-static int bmp280_read_burst(
-    struct i2c_client *client,
-    u8 start_reg_addr,
-    u8 *rd_vals,
+static ssize_t bmp280_read_range(
+    BMP280Device *bmp_dev,
+    u8 start_reg,
+    u8 *dest,
     u8 len
 ) {
-    u8 reg = start_reg_addr;
-    struct i2c_msg msgs[] = {
-        {
-            .addr = client->addr,
-            .flags = 0, // write
-            .len = 1,
-            .buf = &reg,
-        },
-        {
-            .addr = client->addr,
-            .flags = I2C_M_RD, // read
-            .len = len,
-            .buf = rd_vals,
-        }
-    };
-    int ret;
+    struct i2c_client *client = bmp_dev->client;
+    ssize_t ret;
 
-    ret = i2c_transfer(client->adapter, msgs, 2);
-    if (ret != 2) {
-        dev_err(&client->dev, "Failed to range read\n");
-        return -EIO;
+    ret = i2c_master_send(client, &start_reg, 1);
+    if (ret < 0) {
+        dev_err(
+            &client->dev,
+            "Failed to select the starting register 0x%x\n",
+            start_reg
+        );
+        return ret;
     }
 
-    return 0;
-}
-
-static int bmp280_write_reg(struct i2c_client *client, u8 reg_addr, u8 val)
-{
-    u8 wr[2] = {reg_addr, val};
-    int ret;
-
-    ret = i2c_master_send(client, wr, 2);
+    ret = i2c_master_recv(client, dest, len);
     if (ret < 0) {
-        dev_err(&client->dev, "Failed to write 0x%x register\n", reg_addr);
+        dev_err(
+            &client->dev,
+            "Failed to read range starting from 0x%x register\n",
+            start_reg
+        );
         return ret;
     }
 
     return 0;
 }
 
-static int __maybe_unused bmp280_write_burst(
-    struct i2c_client *client,
-    u8 start_reg_addr,
-    u8 *wr_vals,
-    u8 len
-) {
-    u8 reg = start_reg_addr;
-    struct i2c_msg msgs[] = {
-        {
-            .addr = client->addr,
-            .flags = 0, // write
-            .len = 1,
-            .buf = &reg,
-        },
-        {
-            .addr = client->addr,
-            .flags = 0, // write
-            .len = len,
-            .buf = wr_vals,
-        }
-    };
-    int ret;
+static ssize_t bmp280_write(BMP280Device *bmp_dev, u8 reg_addr, u8 value)
+{
+    struct i2c_client *client = bmp_dev->client;
+    u8 data[2] = {reg_addr, value};
+    ssize_t ret;
 
-    ret = i2c_transfer(client->adapter, msgs, 2);
-    if (ret != 2) {
-        dev_err(&client->dev, "Failed to range write\n");
-        return -EIO;
+    ret = i2c_master_send(client, data, 2);
+    if (ret < 0) {
+        dev_err(
+            &client->dev,
+            "Failed to write to the 0x%x register\n",
+            reg_addr
+        );
+        return -1;
     }
+
+    return 0;
 }
 
-static int bmp280_modify_reg(
-    struct i2c_client *client,
+static ssize_t bmp280_modify(
+    BMP280Device *bmp_dev,
     u8 reg_addr,
     u8 mask,
     u8 val
 ) {
-    u8 reg_val;
-    int ret;
+    struct i2c_client *client = bmp_dev->client;
+    u8 orig_val, modified_val;
+    ssize_t ret;
 
-    ret = bmp280_read_reg(client, reg_addr);
+    ret = bmp280_read(bmp_dev, reg_addr);
     if (ret < 0) {
+        dev_err(
+            &bmp_dev->client->dev,
+            "Failed to select 0x%x register for modification\n",
+            reg_addr
+        );
         return ret;
-    } else {
-        reg_val = ret;
     }
 
-    reg_val &= ~mask;
-    reg_val |= (val & mask);
-    return bmp280_write_reg(client, reg_addr, reg_val);
+    orig_val = (u8)ret;
+    modified_val = (orig_val & ~mask) | (val & mask);
+
+    ret = bmp280_write(bmp_dev, reg_addr, modified_val);
+    if (ret < 0) {
+        dev_err(
+            &client->dev,
+            "Failed to write modified value to 0x%x register\n",
+            reg_addr
+        );
+        return ret;
+    }
+
+    return 0;
 }
 
-static int bmp280_get_id(struct i2c_client *client)
+static ssize_t bmp280_get_id(BMP280Device *bmp_dev)
+{
+    int id;
+
+    id = bmp280_read(bmp_dev, BMP280_ID_REG_ADDR);
+    if (id < 0) {
+        dev_err(&bmp_dev->client->dev, "Failed to read the device id\n");
+        return -1;
+    }
+
+    dev_dbg(&bmp_dev->client->dev, "Device id: 0x%x\n", id);
+    return id;
+}
+
+static ssize_t bmp280_get_status(BMP280Device *bmp_dev)
+{
+    int status;
+
+    status = bmp280_read(bmp_dev, BMP280_STATUS_REG_ADDR);
+    if (status < 0) {
+        dev_err(&bmp_dev->client->dev, "Failed to read the device status\n");
+        return -1;
+    }
+    return status;
+}
+
+static int bmp280_set_power_mode(BMP280Device *bmp_dev, BMP280Mode mode)
 {
     int ret;
 
-    ret = bmp280_read_reg(client, BMP280_ID_REG_ADDR);
-    if (ret < 0) {
-        dev_err(&client->dev, "Failed read device id\n");
-        return ret;
-    }
-    dev_notice(&client->dev, "bmp280 device id 0x%x\n", ret);
-
-    return ret; // id
-}
-
-static int bmp280_set_mode(struct i2c_client *client, BMP280_Mode mode)
-{
-    return bmp280_modify_reg(
-        client,
+    ret = bmp280_modify(
+        bmp_dev,
         BMP280_CTRL_MEAS_REG_ADDR,
         BMP280_CTRL_MEAS_MODE,
         mode
     );
+    if (ret < 0) {
+        dev_err(&bmp_dev->client->dev, "Failed to set power mode\n");
+        return -1;
+    }
+
+    return 0;
 }
 
-static int bmp280_reset(struct i2c_client *client)
+static int bmp280_reset(BMP280Device *bmp_dev)
 {
-    return bmp280_write_reg(client, BMP280_RESET_REG_ADDR, BMP280_RESET);
+    int ret;
+
+    ret = bmp280_write(bmp_dev, BMP280_RESET_REG_ADDR, BMP280_RESET);
+    if (ret < 0) {
+        dev_err(&bmp_dev->client->dev, "Failed to reset the device\n");
+        return -1;
+    }
+
+    return 0;
 }
 
-static int bmp280_set_oversampling(
-    struct i2c_client *client,
-    BMP280_Ovrsmpl ovrsmpl
-) {
+static int bmp280_set_oversampling(BMP280Device *bmp_dev, BMP280Ovrsmpl ovrsmpl)
+{
+    int ret;
+
     if (ovrsmpl < BMP280_OVERSAMPLING_SKIPPED
-        || ovrsmpl > BMP280_OVERSAMPLING_16) {
+        || ovrsmpl > BMP280_OVERSAMPLING_16)
+    {
         dev_err(
-            &client->dev,
+            &bmp_dev->client->dev,
             "Invalid oversampling value: 0x%x\n",
             ovrsmpl
         );
         return -1;
     }
-    return bmp280_modify_reg(
-        client,
+    ret = bmp280_modify(
+        bmp_dev,
         BMP280_CTRL_MEAS_REG_ADDR,
         BMP280_CTRL_MEAS_TEMP_OVERSAMPLING,
-        BMP280_OVERSAMPLING_1
+        ovrsmpl
     );
+    if (ret < 0) {
+        dev_err(
+            &bmp_dev->client->dev,
+            "Failed to set oversampling to 0x%x\n",
+            ovrsmpl
+        );
+    }
+
+    return 0;
 }
 
 static int bmp280_set_filter_coeff(
-    struct i2c_client *client,
-    BMP280_FiltCoeff coeff
+    BMP280Device *bmp_dev,
+    BMP280FiltCoeff coeff
 ) {
+    int ret;
+
     if (coeff < BMP280_FILTER_OFF || coeff > BMP280_FILTER_COEFF_16) {
         dev_err(
-            &client->dev,
-            "Invalid filter coeff: 0x%x",
+            &bmp_dev->client->dev,
+            "Invalid filter coeff value: 0x%x\n",
             coeff
         );
         return -1;
     }
-    return bmp280_modify_reg(
-        client,
+
+    ret = bmp280_modify(
+        bmp_dev,
         BMP280_CONFIG_REG_ADDR,
         BMP280_CONFIG_FILTER,
-        BMP280_FILTER_OFF
+        coeff
     );
-}
+    if (ret < 0) {
+        dev_err(
+            &bmp_dev->client->dev,
+            "Failed to set oversmapling to 0x%x\n",
+            coeff
+        );
+        return -1;
+    }
 
-static int bmp280_configure(
-    struct i2c_client *client,
-    BMP280_Config config
-) {
-    if (bmp280_set_oversampling(client, config.ovrsmpl)) {
-        dev_err(&client->dev, "Failed to set oversampling value\n");
-        return -1;
-    }
-    if (bmp280_set_filter_coeff(client, config.coeff)) {
-        dev_err(&client->dev, "Failed to set filter coefficient\n");
-        return -1;
-    }
     return 0;
 }
 
-static int bmp280_read_temp_blocking(struct i2c_client *client)
+static void bmp280_init(BMP280Device *bmp_dev) {
+    bmp280_set_oversampling(bmp_dev, BMP280_OVERSAMPLING_1);
+    bmp280_set_filter_coeff(bmp_dev, BMP280_FILTER_OFF);
+}
+
+static ssize_t bmp280_read_temp_blocking(BMP280Device *bmp_dev)
 {
 #define TEMP_DATA_LEN 3
     u8 temp_data[TEMP_DATA_LEN];
-    u32 temperature;
     const u32 temp_mask = 0xFFFFF;
-    u8 status;
-    int ret;
+    u32 temp;
+    ssize_t ret;
+    struct i2c_client *client = bmp_dev->client;
 
-    // start the temperature conversion
-    dev_dbg(&client->dev, "Set mode to FORCED\n");
-    bmp280_set_mode(client, BMP280_MODE_FORCED);
+    bmp280_set_power_mode(bmp_dev, BMP280_MODE_FORCED);
 
-    // wait for conversion to finish
-    do {
-        status = bmp280_read_reg(client, BMP280_STATUS_REG_ADDR);
-        if (status < 0) {
-            dev_err(&client->dev, "Failed to read device status\n");
-            return -1;
-        } else {
+    // TODO: add a timeout
+    for (;;) {
+        if (bmp280_get_status(bmp_dev) & BMP280_STATUS_MEASURING) {
             msleep(10);
+        } else {
+            break;
         }
-    } while (status & BMP280_STATUS_MEASURING);
+    }
 
     // read data from the temperature registers
-    ret = bmp280_read_burst(
-        client,
+    ret = bmp280_read_range(
+        bmp_dev,
         BMP280_TEMP_MSB_REG_ADDR,
         temp_data,
         TEMP_DATA_LEN
     );
     if (ret < 0) {
-        dev_err(&client->dev, "Failed read temperature registers\n");
-        return ret;
+        dev_err(&client->dev, "Failed read the temperature registers\n");
+        return -1;
     }
 
-    temperature = (temp_data[0] << 12) // msb
-                | (temp_data[1] << 4) // lsb
-                | (temp_data[2] & BMP280_TEMP_XSLB); // xlsb
-    temperature &= temp_mask;
-    return temperature;
+    temp = (temp_data[0] << 12) // msb
+            | (temp_data[1] << 4) // lsb
+            | (temp_data[2] & BMP280_TEMP_XSLB); // xlsb
+    temp &= temp_mask;
+
+    dev_notice(&bmp_dev->client->dev, "Raw Temp: %d", temp);
+    return temp;
 }
 
 static void bmp280_work_cb(struct work_struct *w)
 {
-    BMP280_Device *bdev = container_of(w, BMP280_Device, work);
-    int raw_temp;
+    BMP280Device *bmp_dev = container_of(w, BMP280Device, work);
+    ssize_t raw_temp;
 
-    raw_temp = bmp280_read_temp_blocking(bdev->client);
+    raw_temp = bmp280_read_temp_blocking(bmp_dev);
     if (raw_temp < 0) {
-        dev_notice(
-            &bdev->client->dev,
-            "Failed to read temperature.\n",
-            raw_temp
-        );
+        dev_notice(&bmp_dev->client->dev, "Failed to read temperature.\n");
         goto err;
-    } else {
-        bdev->raw_temp = raw_temp;
-        dev_debug(
-            &bdev->client->dev,
-            "Raw Temperature: %d\n",
-            bdev->raw_temp
-        );
     }
-    mod_timer(&bdev->tim, jiffies + msecs_to_jiffies(READ_TEMP_INTERVAL_MS));
+
+    bmp_dev->raw_temp = raw_temp;
+    mod_timer(&bmp_dev->tim, jiffies + msecs_to_jiffies(READ_TEMP_INTERVAL_MS));
     return;
 
 err:
-    dev_err(&bdev->client->dev, "The bmp280 work failed\n");
+    dev_err(&bmp_dev->client->dev, "The %s callback failed\n", __func__);
 }
 
 static void bmp280_timer_cb(struct timer_list *t)
 {
-    BMP280_Device *bdev = container_of(t, BMP280_Device, tim);
-    schedule_work(&bdev->work);
+    BMP280Device *bmp_dev = container_of(t, BMP280Device, tim);
+    schedule_work(&bmp_dev->work);
 }
 
 static int bmp280_probe(struct i2c_client *client)
 {
-    BMP280_Device *bdev;
-    BMP280_Config config = {
-        .ovrsmpl = BMP280_OVERSAMPLING_1,
-        .coeff = BMP280_FILTER_OFF,
-    };
+    BMP280Device *bmp_dev;
 
-    bdev = kzalloc(sizeof(BMP280_Device), GFP_KERNEL);
-    if (bdev == NULL) {
-        dev_err(&client->dev, "Failed to allocate bmp280 device structure\n");
+    bmp_dev = kzalloc(sizeof(BMP280Device), GFP_KERNEL);
+    if (bmp_dev == NULL) {
+        dev_err(&client->dev, "Failed to allocate the device\n");
         return -ENOMEM;
     }
-    i2c_set_clientdata(client, bdev);
 
-    bdev->client = client;
-    bdev->config = config;
-
-    if (bmp280_get_id(client) != BMP280_ID) {
-        dev_err(&client->dev, "Invalid ID\n");
-        goto err;
-    }
+    i2c_set_clientdata(client, bmp_dev);
+    bmp_dev->client = client;
 
     // Reset the sensor before initialization
-    bmp280_reset(client);
+    bmp280_reset(bmp_dev);
 
-    if (bmp280_configure(bdev->client, bdev->config)) {
-        dev_err(&client->dev, "Failed to configure bmp280\n");
+    if (bmp280_get_id(bmp_dev) != BMP280_ID) {
+        dev_err(&bmp_dev->client->dev, "Invalid ID\n");
         goto err;
     }
-    dev_info(&client->dev, "Configured the bmp280 sensor");
 
-    timer_setup(&bdev->tim, bmp280_timer_cb, 0);
-    mod_timer(&bdev->tim, jiffies + msecs_to_jiffies(READ_TEMP_INTERVAL_MS));
+    bmp280_init(bmp_dev);
+    dev_info(&bmp_dev->client->dev, "Initialized the bmp280 sensor");
 
-    INIT_WORK(&bdev->work, bmp280_work_cb);
+    timer_setup(&bmp_dev->tim, bmp280_timer_cb, 0);
+    mod_timer(
+        &bmp_dev->tim,
+        jiffies + msecs_to_jiffies(READ_TEMP_INTERVAL_MS)
+    );
+
+    INIT_WORK(&bmp_dev->work, bmp280_work_cb);
     return 0;
 
 err:
-    kfree(bdev);
+    kfree(bmp_dev);
     return -1;
 }
 
 static void bmp280_remove(struct i2c_client *client)
 {
-    BMP280_Device *bdev = i2c_get_clientdata(client);
+    BMP280Device *bmp_dev = i2c_get_clientdata(client);
 
-    cancel_work_sync(&bdev->work);
-    del_timer_sync(&bdev->tim);
-    kfree(bdev);
+    cancel_work_sync(&bmp_dev->work);
+    del_timer_sync(&bmp_dev->tim);
+    kfree(bmp_dev);
 }
 
 struct of_device_id bmp280_of_match[] = {
