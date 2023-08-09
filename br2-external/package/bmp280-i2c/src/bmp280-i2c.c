@@ -72,6 +72,7 @@ typedef struct {
     u16 dig_t1;
     s16 dig_t2;
     s16 dig_t3;
+    struct kobject *kobj;
 } BMP280CalibParam;
 
 typedef struct {
@@ -448,6 +449,70 @@ static void bmp280_timer_cb(struct timer_list *t)
     schedule_work(&bmp_dev->work);
 }
 
+ssize_t raw_temp_show(
+    struct device *dev,
+    struct device_attribute *attr,
+    char *buf
+) {
+    struct i2c_client *client = to_i2c_client(dev);
+    BMP280Device *bmp_dev = i2c_get_clientdata(client);
+    return sysfs_emit(buf, "%d\n", bmp_dev->raw_temp);
+}
+
+ssize_t dig_t1_show(
+    struct device *dev,
+    struct device_attribute *attr,
+    char *buf
+) {
+    struct i2c_client *client = to_i2c_client(dev);
+    BMP280Device *bmp_dev = i2c_get_clientdata(client);
+    return sysfs_emit(buf, "%d\n", bmp_dev->params.dig_t1);
+}
+ssize_t dig_t2_show(
+    struct device *dev,
+    struct device_attribute *attr,
+    char *buf
+) {
+    struct i2c_client *client = to_i2c_client(dev);
+    BMP280Device *bmp_dev = i2c_get_clientdata(client);
+    return sysfs_emit(buf, "%d\n", bmp_dev->params.dig_t2);
+}
+
+ssize_t dig_t3_show(
+    struct device *dev,
+    struct device_attribute *attr,
+    char *buf
+) {
+    struct i2c_client *client = to_i2c_client(dev);
+    BMP280Device *bmp_dev = i2c_get_clientdata(client);
+    return sysfs_emit(buf, "%d\n", bmp_dev->params.dig_t3);
+}
+
+DEVICE_ATTR_RO(raw_temp);
+DEVICE_ATTR_RO(dig_t1);
+DEVICE_ATTR_RO(dig_t2);
+DEVICE_ATTR_RO(dig_t3);
+
+static struct attribute *bmp280_temp_attrs[] = {
+    &dev_attr_raw_temp.attr,
+    NULL,
+};
+
+static struct attribute *bmp280_calib_attrs[] = {
+    &dev_attr_dig_t1.attr,
+    &dev_attr_dig_t2.attr,
+    &dev_attr_dig_t3.attr,
+    NULL,
+};
+
+static struct attribute_group bmp280_temp_group = {
+    .attrs = bmp280_temp_attrs,
+};
+
+static struct attribute_group bmp280_calib_group = {
+    .attrs = bmp280_calib_attrs,
+};
+
 static int bmp280_probe(struct i2c_client *client)
 {
     BMP280Device *bmp_dev;
@@ -476,9 +541,25 @@ static int bmp280_probe(struct i2c_client *client)
     );
 
     INIT_WORK(&bmp_dev->work, bmp280_work_cb);
+
+    if (sysfs_create_group(&bmp_dev->client->dev.kobj, &bmp280_temp_group)) {
+        dev_err(&bmp_dev->client->dev, "Failed to create a sysfs group\n");
+        goto err;
+    }
+
+    bmp_dev->params.kobj = kobject_create_and_add(
+                                "calib_params",
+                                &bmp_dev->client->dev.kobj
+                            );
+    if (sysfs_create_group(bmp_dev->params.kobj, &bmp280_calib_group)) {
+        dev_err(&bmp_dev->client->dev, "Failed to create a sysfs group\n");
+        goto err;
+    }
+
     return 0;
 
 err:
+    kobject_put(bmp_dev->params.kobj);
     kfree(bmp_dev);
     return -1;
 }
@@ -487,8 +568,13 @@ static void bmp280_remove(struct i2c_client *client)
 {
     BMP280Device *bmp_dev = i2c_get_clientdata(client);
 
+    sysfs_remove_group(&client->dev.kobj, &bmp280_temp_group);
+    sysfs_remove_group(&client->dev.kobj, &bmp280_calib_group);
+
     cancel_work_sync(&bmp_dev->work);
     del_timer_sync(&bmp_dev->tim);
+
+    kobject_put(bmp_dev->params.kobj);
     kfree(bmp_dev);
 }
 
