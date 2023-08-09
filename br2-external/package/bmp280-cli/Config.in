@@ -1,0 +1,4 @@
+config BR2_PACKAGE_BMP280_CLI
+	bool "bmp280-cli"
+	help
+	  A CLI to interact with the bmp280-i2c driver
