@@ -72,7 +72,6 @@ typedef struct {
     u16 dig_t1;
     s16 dig_t2;
     s16 dig_t3;
-    struct kobject *kobj;
 } BMP280CalibParam;
 
 typedef struct {
@@ -528,7 +527,7 @@ static int bmp280_probe(struct i2c_client *client)
 
     if (bmp280_get_id(bmp_dev) != BMP280_ID) {
         dev_err(&bmp_dev->client->dev, "Invalid ID\n");
-        goto err;
+        goto free_device;
     }
 
     bmp280_init(bmp_dev);
@@ -544,22 +543,22 @@ static int bmp280_probe(struct i2c_client *client)
 
     if (sysfs_create_group(&bmp_dev->client->dev.kobj, &bmp280_temp_group)) {
         dev_err(&bmp_dev->client->dev, "Failed to create a sysfs group\n");
-        goto err;
+        goto free_device;
     }
 
-    bmp_dev->params.kobj = kobject_create_and_add(
-                                "calib_params",
-                                &bmp_dev->client->dev.kobj
-                            );
-    if (sysfs_create_group(bmp_dev->params.kobj, &bmp280_calib_group)) {
+    // TODO: create a separate directory for the calibration parameters
+    if (sysfs_create_group(&bmp_dev->client->dev.kobj, &bmp280_calib_group)) {
         dev_err(&bmp_dev->client->dev, "Failed to create a sysfs group\n");
-        goto err;
+        goto free_temp_group;
     }
 
     return 0;
 
-err:
-    kobject_put(bmp_dev->params.kobj);
+free_calib_group:
+    sysfs_remove_group(&client->dev.kobj, &bmp280_calib_group);
+free_temp_group:
+    sysfs_remove_group(&client->dev.kobj, &bmp280_temp_group);
+free_device:
     kfree(bmp_dev);
     return -1;
 }
@@ -574,7 +573,6 @@ static void bmp280_remove(struct i2c_client *client)
     cancel_work_sync(&bmp_dev->work);
     del_timer_sync(&bmp_dev->tim);
 
-    kobject_put(bmp_dev->params.kobj);
     kfree(bmp_dev);
 }
 
