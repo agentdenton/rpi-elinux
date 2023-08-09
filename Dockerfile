@@ -46,7 +46,9 @@ RUN apt-get install -y \
     rsync \
     file \
     bc \
-    findutils
+    findutils \
+    libncurses5-dev
+    meson
 
 RUN useradd --shell=/bin/bash --create-home $USERNAME
 RUN echo "$USERNAME ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers
