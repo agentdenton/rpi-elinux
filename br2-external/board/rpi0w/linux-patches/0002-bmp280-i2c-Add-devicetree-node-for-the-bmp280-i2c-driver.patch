@@ -1,0 +1,29 @@
+From 99f43bca314faa6998e006df0e2437ec4e3a5375 Mon Sep 17 00:00:00 2001
+From: Andy Brychenko <andybrychenko@gmail.com>
+Date: Thu, 10 Aug 2023 14:49:24 +0300
+Subject: [PATCH] bmp280-i2c: Add devicetree node for the bmp280-i2c driver
+
+---
+ arch/arm/boot/dts/bcm2708-rpi-zero-w.dts | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/arch/arm/boot/dts/bcm2708-rpi-zero-w.dts b/arch/arm/boot/dts/bcm2708-rpi-zero-w.dts
+index d72c6bc7c963..e383e3254eb1 100644
+--- a/arch/arm/boot/dts/bcm2708-rpi-zero-w.dts
++++ b/arch/arm/boot/dts/bcm2708-rpi-zero-w.dts
+@@ -206,6 +206,12 @@ &i2c1 {
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&i2c1_pins>;
+ 	clock-frequency = <100000>;
++
++	bmp280@76 {
++		compatible = "bmp280-i2c";
++		reg = <0x76>;
++		status = "okay";
++	};
+ };
+
+ &i2c2 {
+--
+2.41.0
+

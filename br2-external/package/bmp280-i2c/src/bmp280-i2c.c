@@ -204,8 +204,6 @@ static ssize_t bmp280_get_id(BMP280Device *bmp_dev)
         dev_err(&bmp_dev->client->dev, "Failed to read the device id\n");
         return -1;
     }
-
-    dev_dbg(&bmp_dev->client->dev, "Device id: 0x%x\n", id);
     return id;
 }
 
@@ -369,9 +367,18 @@ static ssize_t bmp280_populate_calib_params(BMP280Device *bmp_dev)
     return 0;
 }
 
-static void bmp280_init(BMP280Device *bmp_dev) {
+static int bmp280_init(BMP280Device *bmp_dev) {
+    ssize_t id;
+
     // Reset the sensor before initialization
     bmp280_reset(bmp_dev);
+
+    id = bmp280_get_id(bmp_dev);
+    if (id != BMP280_ID) {
+        dev_err(&bmp_dev->client->dev, "Invalid ID\n");
+        return -1;
+    }
+    dev_info(&bmp_dev->client->dev, "Found device. Device id: 0x%x\n", id);
 
     bmp280_set_oversampling(bmp_dev, BMP280_OVERSAMPLING_1);
     bmp280_set_filter_coeff(bmp_dev, BMP280_FILTER_COEFF_16);
@@ -379,6 +386,7 @@ static void bmp280_init(BMP280Device *bmp_dev) {
     bmp280_set_power_mode(bmp_dev, BMP280_MODE_NORMAL);
 
     bmp280_populate_calib_params(bmp_dev);
+    return 0;
 }
 
 static ssize_t bmp280_read_temp_blocking(BMP280Device *bmp_dev)
@@ -417,8 +425,6 @@ static ssize_t bmp280_read_temp_blocking(BMP280Device *bmp_dev)
             | (temp_data[1] << 4) // lsb
             | (temp_data[2] >> 4); // xlsb
     temp &= temp_mask;
-
-    dev_notice(&bmp_dev->client->dev, "Raw Temp: %d\n", temp);
     return temp;
 }
 
@@ -429,7 +435,7 @@ static void bmp280_work_cb(struct work_struct *w)
 
     raw_temp = bmp280_read_temp_blocking(bmp_dev);
     if (raw_temp < 0) {
-        dev_notice(&bmp_dev->client->dev, "Failed to read temperature.\n");
+        dev_err(&bmp_dev->client->dev, "Failed to read temperature.\n");
         goto err;
     }
 
@@ -525,13 +531,11 @@ static int bmp280_probe(struct i2c_client *client)
     i2c_set_clientdata(client, bmp_dev);
     bmp_dev->client = client;
 
-    if (bmp280_get_id(bmp_dev) != BMP280_ID) {
-        dev_err(&bmp_dev->client->dev, "Invalid ID\n");
-        goto free_device;
+    if (bmp280_init(bmp_dev) < 0) {
+        dev_err(&bmp_dev->client->dev, "Failed to initialized the device\n");
+    } else {
+        dev_info(&bmp_dev->client->dev, "Initialized the device\n");
     }
-
-    bmp280_init(bmp_dev);
-    dev_info(&bmp_dev->client->dev, "Initialized the bmp280 sensor\n");
 
     timer_setup(&bmp_dev->tim, bmp280_timer_cb, 0);
     mod_timer(
