@@ -1,21 +1,5 @@
-### I2C pins on the board
+### Description
 
-SDA - 3
-SCL - 5
-
-### BMP280
-ID register addr: 0xD0
-
-### Reference driver
-hwmon/max1619.c
-
-### Todos
-
-- [] read temperature using forced mode
-- [] Provide multiple temperature reading modes
-- [] Divide temperature reading into a separate tasks
-- [] I2C interrupts
-- [] Export temperature to sysfs
-- [] Write a userspace program to read temperature from sysfs
-- [] Overview
-- [] Using ints for `read_reg` and `write_reg` potentially a bad idea
+A small kernel driver to practice using i2c kernel API. Relies on the patch
+inside the linux-patches directory that adds the bmp280 device-tree node to
+i2c1.
