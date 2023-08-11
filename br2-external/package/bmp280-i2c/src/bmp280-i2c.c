@@ -31,8 +31,6 @@
 
 #define BMP280_ID 0x58
 
-#define READ_TEMP_INTERVAL_MS 1000U
-
 
 typedef enum {
     BMP280_STANDBY_0_5    = 0b000 << 5,
@@ -79,9 +77,13 @@ typedef struct {
     struct timer_list tim;
     struct work_struct work;
 
+    BMP280Mode mode;
     BMP280FiltCoeff filt_coeff;
     BMP280Ovrsmpl oversampling;
+    BMP280StandbyTime standby_time;
     BMP280CalibParam params;
+    u32 interval_ms;
+    u8 id;
 
     u32 raw_temp;
 } BMP280Device;
@@ -367,7 +369,8 @@ static ssize_t bmp280_populate_calib_params(BMP280Device *bmp_dev)
     return 0;
 }
 
-static int bmp280_init(BMP280Device *bmp_dev) {
+static int bmp280_init(BMP280Device *bmp_dev)
+{
     ssize_t id;
 
     // Reset the sensor before initialization
@@ -377,15 +380,16 @@ static int bmp280_init(BMP280Device *bmp_dev) {
     if (id != BMP280_ID) {
         dev_err(&bmp_dev->client->dev, "Invalid ID\n");
         return -1;
+    } else {
+        dev_info(&bmp_dev->client->dev, "Found device. Device id: 0x%x\n", id);
+        bmp_dev->id = id;
     }
-    dev_info(&bmp_dev->client->dev, "Found device. Device id: 0x%x\n", id);
-
-    bmp280_set_oversampling(bmp_dev, BMP280_OVERSAMPLING_1);
-    bmp280_set_filter_coeff(bmp_dev, BMP280_FILTER_COEFF_16);
-    bmp280_set_standby_time(bmp_dev, BMP280_STANDBY_500);
-    bmp280_set_power_mode(bmp_dev, BMP280_MODE_NORMAL);
 
     bmp280_populate_calib_params(bmp_dev);
+    bmp280_set_filter_coeff(bmp_dev, bmp_dev->filt_coeff);
+    bmp280_set_oversampling(bmp_dev, bmp_dev->oversampling);
+    bmp280_set_standby_time(bmp_dev, bmp_dev->standby_time);
+    bmp280_set_power_mode(bmp_dev, bmp_dev->mode);
     return 0;
 }
 
@@ -441,7 +445,7 @@ static void bmp280_work_cb(struct work_struct *w)
 
     bmp_dev->raw_temp = raw_temp;
 
-    mod_timer(&bmp_dev->tim, jiffies + msecs_to_jiffies(READ_TEMP_INTERVAL_MS));
+    mod_timer(&bmp_dev->tim, jiffies + msecs_to_jiffies(bmp_dev->interval_ms));
     return;
 
 err:
@@ -452,6 +456,152 @@ static void bmp280_timer_cb(struct timer_list *t)
 {
     BMP280Device *bmp_dev = container_of(t, BMP280Device, tim);
     schedule_work(&bmp_dev->work);
+}
+
+ssize_t mode_show(
+    struct device *dev,
+    struct device_attribute *attr,
+    char *buf
+) {
+    struct i2c_client *client = to_i2c_client(dev);
+    BMP280Device *bmp_dev = i2c_get_clientdata(client);
+    return sysfs_emit(buf, "%d\n", bmp_dev->mode);
+}
+
+ssize_t mode_store(
+    struct device *dev,
+    struct device_attribute *attr,
+    const char *buf, size_t count
+) {
+    struct i2c_client *client = to_i2c_client(dev);
+    BMP280Device *bmp_dev = i2c_get_clientdata(client);
+    unsigned long value;
+    int ret;
+
+    ret = kstrtoul(buf, 10, &value);
+    if (ret) {
+        dev_err(&client->dev, "Failed to convert %s to a number\n", buf);
+        return ret;
+    }
+    bmp_dev->mode = (BMP280Mode)value;
+    return count;
+}
+
+ssize_t coeff_show(
+    struct device *dev,
+    struct device_attribute *attr,
+    char *buf
+) {
+    struct i2c_client *client = to_i2c_client(dev);
+    BMP280Device *bmp_dev = i2c_get_clientdata(client);
+    return sysfs_emit(buf, "%d\n", bmp_dev->filt_coeff >> 2);
+}
+
+ssize_t coeff_store(
+    struct device *dev,
+    struct device_attribute *attr,
+    const char *buf, size_t count
+) {
+    struct i2c_client *client = to_i2c_client(dev);
+    BMP280Device *bmp_dev = i2c_get_clientdata(client);
+    unsigned long value;
+    int ret;
+
+    ret = kstrtoul(buf, 10, &value);
+    if (ret) {
+        dev_err(&client->dev, "Failed to convert %s to a number\n", buf);
+        return ret;
+    }
+    bmp_dev->filt_coeff = (BMP280FiltCoeff)(value << 2);
+    return count;
+}
+
+// TODO: Create a genetic_show and generic_store macros to decrease duplication
+ssize_t oversampling_show(
+    struct device *dev,
+    struct device_attribute *attr,
+    char *buf
+) {
+    struct i2c_client *client = to_i2c_client(dev);
+    BMP280Device *bmp_dev = i2c_get_clientdata(client);
+    return sysfs_emit(buf, "%d\n", bmp_dev->oversampling >> 5);
+}
+
+ssize_t oversampling_store(
+    struct device *dev,
+    struct device_attribute *attr,
+    const char *buf, size_t count
+) {
+    struct i2c_client *client = to_i2c_client(dev);
+    BMP280Device *bmp_dev = i2c_get_clientdata(client);
+    unsigned long value;
+    int ret;
+
+    ret = kstrtoul(buf, 10, &value);
+    if (ret) {
+        dev_err(&client->dev, "Failed to convert %s to a number\n", buf);
+        return ret;
+    }
+    bmp_dev->oversampling = (BMP280Ovrsmpl)(value << 5);
+    return count;
+}
+
+ssize_t standby_time_show(
+    struct device *dev,
+    struct device_attribute *attr,
+    char *buf
+) {
+    struct i2c_client *client = to_i2c_client(dev);
+    BMP280Device *bmp_dev = i2c_get_clientdata(client);
+    return sysfs_emit(buf, "%d\n", bmp_dev->standby_time >> 5);
+}
+
+ssize_t standby_time_store(
+    struct device *dev,
+    struct device_attribute *attr,
+    const char *buf, size_t count
+) {
+    struct i2c_client *client = to_i2c_client(dev);
+    BMP280Device *bmp_dev = i2c_get_clientdata(client);
+    unsigned long value;
+    int ret;
+
+    ret = kstrtoul(buf, 10, &value);
+    if (ret) {
+        dev_err(&client->dev, "Failed to convert %s to a number\n", buf);
+        return ret;
+    }
+    bmp_dev->standby_time = (BMP280StandbyTime)(value << 5);
+    return count;
+}
+
+ssize_t interval_show(
+    struct device *dev,
+    struct device_attribute *attr,
+    char *buf
+) {
+    struct i2c_client *client = to_i2c_client(dev);
+    BMP280Device *bmp_dev = i2c_get_clientdata(client);
+    return sysfs_emit(buf, "%d\n", bmp_dev->interval_ms);
+}
+
+ssize_t interval_store(
+    struct device *dev,
+    struct device_attribute *attr,
+    const char *buf, size_t count
+) {
+    struct i2c_client *client = to_i2c_client(dev);
+    BMP280Device *bmp_dev = i2c_get_clientdata(client);
+    unsigned long value;
+    int ret;
+
+    ret = kstrtoul(buf, 10, &value);
+    if (ret) {
+        dev_err(&client->dev, "Failed to convert %s to a number\n", buf);
+        return ret;
+    }
+    bmp_dev->interval_ms = (u32)value;
+    return count;
 }
 
 ssize_t raw_temp_show(
@@ -473,6 +623,7 @@ ssize_t dig_t1_show(
     BMP280Device *bmp_dev = i2c_get_clientdata(client);
     return sysfs_emit(buf, "%d\n", bmp_dev->params.dig_t1);
 }
+
 ssize_t dig_t2_show(
     struct device *dev,
     struct device_attribute *attr,
@@ -493,12 +644,22 @@ ssize_t dig_t3_show(
     return sysfs_emit(buf, "%d\n", bmp_dev->params.dig_t3);
 }
 
+DEVICE_ATTR_RW(mode);
+DEVICE_ATTR_RW(coeff);
+DEVICE_ATTR_RW(interval);
+DEVICE_ATTR_RW(oversampling);
+DEVICE_ATTR_RW(standby_time);
 DEVICE_ATTR_RO(raw_temp);
 DEVICE_ATTR_RO(dig_t1);
 DEVICE_ATTR_RO(dig_t2);
 DEVICE_ATTR_RO(dig_t3);
 
-static struct attribute *bmp280_temp_attrs[] = {
+static struct attribute *bmp280_attrs[] = {
+    &dev_attr_mode.attr,
+    &dev_attr_coeff.attr,
+    &dev_attr_interval.attr,
+    &dev_attr_oversampling.attr,
+    &dev_attr_standby_time.attr,
     &dev_attr_raw_temp.attr,
     NULL,
 };
@@ -510,8 +671,8 @@ static struct attribute *bmp280_calib_attrs[] = {
     NULL,
 };
 
-static struct attribute_group bmp280_temp_group = {
-    .attrs = bmp280_temp_attrs,
+static struct attribute_group bmp280_attrs_group = {
+    .attrs = bmp280_attrs,
 };
 
 static struct attribute_group bmp280_calib_group = {
@@ -529,7 +690,13 @@ static int bmp280_probe(struct i2c_client *client)
     }
 
     i2c_set_clientdata(client, bmp_dev);
+
     bmp_dev->client = client;
+    bmp_dev->mode = BMP280_MODE_NORMAL;
+    bmp_dev->filt_coeff = BMP280_FILTER_COEFF_16;
+    bmp_dev->oversampling = BMP280_OVERSAMPLING_1;
+    bmp_dev->standby_time = BMP280_STANDBY_500;
+    bmp_dev->interval_ms = 500;
 
     if (bmp280_init(bmp_dev) < 0) {
         dev_err(&bmp_dev->client->dev, "Failed to initialized the device\n");
@@ -540,12 +707,12 @@ static int bmp280_probe(struct i2c_client *client)
     timer_setup(&bmp_dev->tim, bmp280_timer_cb, 0);
     mod_timer(
         &bmp_dev->tim,
-        jiffies + msecs_to_jiffies(READ_TEMP_INTERVAL_MS)
+        jiffies + msecs_to_jiffies(bmp_dev->interval_ms)
     );
 
     INIT_WORK(&bmp_dev->work, bmp280_work_cb);
 
-    if (sysfs_create_group(&bmp_dev->client->dev.kobj, &bmp280_temp_group)) {
+    if (sysfs_create_group(&bmp_dev->client->dev.kobj, &bmp280_attrs_group)) {
         dev_err(&bmp_dev->client->dev, "Failed to create a sysfs group\n");
         goto free_device;
     }
@@ -561,7 +728,7 @@ static int bmp280_probe(struct i2c_client *client)
 free_calib_group:
     sysfs_remove_group(&client->dev.kobj, &bmp280_calib_group);
 free_temp_group:
-    sysfs_remove_group(&client->dev.kobj, &bmp280_temp_group);
+    sysfs_remove_group(&client->dev.kobj, &bmp280_attrs_group);
 free_device:
     kfree(bmp_dev);
     return -1;
@@ -571,7 +738,7 @@ static void bmp280_remove(struct i2c_client *client)
 {
     BMP280Device *bmp_dev = i2c_get_clientdata(client);
 
-    sysfs_remove_group(&client->dev.kobj, &bmp280_temp_group);
+    sysfs_remove_group(&client->dev.kobj, &bmp280_attrs_group);
     sysfs_remove_group(&client->dev.kobj, &bmp280_calib_group);
 
     cancel_work_sync(&bmp_dev->work);
