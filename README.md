@@ -15,4 +15,4 @@ it available to the host and provides a development environment.
 
 To set up the development environment, run the script below:
 
-`setup.sh`
+`./setup_docker.sh`

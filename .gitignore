@@ -7,11 +7,19 @@ ssh_host_ed25519_key.pub
 ssh_host_rsa_key
 ssh_host_rsa_key.pub
 
-buildroot
 .buildroot-ccache
 .subversion
 
 .wget-hsts
 
 .bash_history
+.bashrc
+.viminfo
 .cache
+
+downloads
+sstate-cache
+rpi0w-build
+qemu-arm-build
+
+bitbake-cookerdaemon.log
