@@ -23,6 +23,10 @@ RUN apt-get install -y \
     python3 \
     python3-pip \
     python3-venv \
+    python3-pexpect \
+    python3-git \
+    python3-jinja2 \
+    python3-subunit \
     ninja-build \
     ccache \
     libffi-dev \
@@ -47,8 +51,22 @@ RUN apt-get install -y \
     file \
     bc \
     findutils \
-    libncurses5-dev
-    meson
+    libncurses5-dev \
+    meson \
+    gawk \
+    diffstat \
+    texinfo \
+    chrpath \
+    socat \
+    xz-utils \
+    debianutils \
+    iputils-ping \
+    libegl1-mesa \
+    libsdl1.2-dev \
+    mesa-common-dev \
+    zstd \
+    liblz4-tool \
+    bmap-tools
 
 RUN useradd --shell=/bin/bash --create-home $USERNAME
 RUN echo "$USERNAME ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers
@@ -58,7 +76,15 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-ENV BR2_EXTERNAL="/home/$USERNAME/br2-external"
+# Possible values: rpi0w rpi3b ...
+ENV RPI_BOARD_NAME="rpi0w"
+
+ENV BR2_EXTERNAL="/home/$USERNAME/br/br2-external"
+
+ENV BB_ENV_PASSTHROUGH_ADDITIONS="DL_DIR SSTATE_DIR TEMPLATECONF"
+ENV SSTATE_DIR="/home/$USERNAME/yocto/shared/sstate-cache"
+ENV DL_DIR="/home/$USERNAME/yocto/shared/downloads"
+ENV TEMPLATECONF="/home/$USERNAME/yocto/sources/meta-raspberrypi-custom/conf/templates/$RPI_BOARD_NAME-template"
 
 # Enable man pages and help messages
 RUN yes | unminimize
