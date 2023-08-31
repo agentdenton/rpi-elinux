@@ -5,8 +5,7 @@ ARG USERNAME
 # Set non-interactive frontend for apt-get to skip any user confirmations
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get clean && apt-get update
-RUN apt-get install -y \
+RUN apt-get clean && apt-get update && apt-get install -y \
     locales \
     vim \
     sudo \
@@ -76,18 +75,22 @@ ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
+ENV RPI_ELINUX_ROOT="/home/$USERNAME/rpi-elinux"
+
 # Possible values: rpi0w rpi3b ...
 ENV RPI_BOARD_NAME="rpi0w"
 
-ENV BR2_EXTERNAL="/home/$USERNAME/br/br2-external"
+ENV BR2_EXTERNAL="/home/$USERNAME/rpi-elinux/br/br2-external"
 
-ENV BB_ENV_PASSTHROUGH_ADDITIONS="DL_DIR SSTATE_DIR TEMPLATECONF"
-ENV SSTATE_DIR="/home/$USERNAME/yocto/shared/sstate-cache"
-ENV DL_DIR="/home/$USERNAME/yocto/shared/downloads"
-ENV TEMPLATECONF="/home/$USERNAME/yocto/sources/meta-raspberrypi-custom/conf/templates/$RPI_BOARD_NAME-template"
+ENV BB_ENV_PASSTHROUGH_ADDITIONS="DL_DIR SSTATE_DIR TEMPLATECONF RPI_ELINUX_ROOT"
+ENV SSTATE_DIR="$RPI_ELINUX_ROOT/yocto/cache/sstate-cache"
+ENV DL_DIR="$RPI_ELINUX_ROOT/yocto/cache/downloads"
+ENV TEMPLATECONF="$RPI_ELINUX_ROOT/yocto/sources/meta-raspberrypi-custom/conf/templates/$RPI_BOARD_NAME-template"
 
 # Enable man pages and help messages
 RUN yes | unminimize
 
 USER $USERNAME
 WORKDIR /home/$USERNAME
+
+RUN mkdir -p rpi-elinux
