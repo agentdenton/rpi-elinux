@@ -17,9 +17,9 @@ ssh_host_rsa_key.pub
 .viminfo
 .cache
 
+cache
 downloads
 sstate-cache
-rpi0w-build
-qemu-arm-build
 
-bitbake-cookerdaemon.log
+*.log
+*-build
