@@ -6,9 +6,9 @@ BBPATH = "${TOPDIR}"
 BBFILES ?= ""
 
 BBLAYERS ?= " \
-  ##OEROOT##/meta \
-  ##OEROOT##/meta-poky \
-  ##OEROOT##/meta-yocto-bsp \
-  ##OEROOT##/meta-raspberrypi \
-  ##OEROOT##/meta-raspberrypi-custom \
+  ${RPI_ELINUX_ROOT}/yocto/sources/poky/meta \
+  ${RPI_ELINUX_ROOT}/yocto/sources/poky/meta-poky \
+  ${RPI_ELINUX_ROOT}/yocto/sources/poky/meta-yocto-bsp \
+  ${RPI_ELINUX_ROOT}/yocto/sources/meta-raspberrypi \
+  ${RPI_ELINUX_ROOT}/yocto/sources/meta-raspberrypi-custom \
   "
