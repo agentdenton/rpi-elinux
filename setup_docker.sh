@@ -1,22 +1,12 @@
-#!/bin/bash
+#!/bin/bash -eu
 
-set -eu
-
-IMG_NAME="rpi-elinux"
-CONTAINER_NAME="rpi-elinux-dev"
+IMG_NAME="rpi-elinux-img"
+CONTAINER_NAME="rpi-elinux"
 
 USERNAME="rpi"
-CURR_DIR="$PWD"
+PROJECT_DIR="/home/$USERNAME/rpi-elinux"
 
-if [[ ! -d "$CURR_DIR/br/buildroot" ]]; then
-    git submodule add git://git.buildroot.net/buildroot br/buildroot
-    git submodule update --init
-fi
-
-if [[ ! -d "$CURR_DIR/yocto/sources/poky" ]]; then
-    git submodule add https://github.com/yoctoproject/poky.git yocto/sources/poky
-    git submodule update --init
-fi
+git submodule update --init --recursive
 
 # remove previously created images
 if [[ -n $(docker ps -a | grep "$CONTAINER_NAME") ]]; then
@@ -29,5 +19,5 @@ docker build -t $IMG_NAME --build-arg USERNAME=$USERNAME .
 
 # create the container
 docker create -it --privileged \
-    --mount type=bind,source="$CURR_DIR",target=/home/$USERNAME \
+    --mount type=bind,source="$PWD",target=$PROJECT_DIR \
     --name $CONTAINER_NAME $IMG_NAME
