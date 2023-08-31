@@ -1,11 +1,11 @@
 [submodule "br/buildroot"]
 	path = br/buildroot
 	url = git://git.buildroot.net/buildroot
-[submodule "yocto/sources/poky"]
-	path = yocto/sources/poky
-	url = https://github.com/yoctoproject/poky.git
-    branch = mickledore
 [submodule "yocto/sources/meta-raspberrypi"]
 	path = yocto/sources/meta-raspberrypi
 	url = https://github.com/agherzan/meta-raspberrypi.git
+	branch = mickledore
+[submodule "yocto/sources/poky"]
+	path = yocto/sources/poky
+	url = https://github.com/yoctoproject/poky.git
 	branch = mickledore
