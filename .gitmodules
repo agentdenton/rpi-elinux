@@ -1,7 +1,6 @@
 [submodule "br/buildroot"]
 	path = br/buildroot
 	url = git://git.buildroot.net/buildroot
-    branch = 2023.08-rc3
 [submodule "yocto/sources/poky"]
 	path = yocto/sources/poky
 	url = https://github.com/yoctoproject/poky.git
@@ -9,4 +8,4 @@
 [submodule "yocto/sources/meta-raspberrypi"]
 	path = yocto/sources/meta-raspberrypi
 	url = https://github.com/agherzan/meta-raspberrypi.git
-    branch = mickledore
+	branch = mickledore
