@@ -4,9 +4,7 @@ IMG_NAME="rpi-elinux-img"
 CONTAINER_NAME="rpi-elinux"
 
 USERNAME="rpi"
-PROJECT_DIR="/home/$USERNAME/rpi-elinux"
-
-git submodule update --init --recursive
+RPI_ELINUX_ROOT="/home/$USERNAME/rpi-elinux"
 
 # remove previously created images
 if [[ -n $(docker ps -a | grep "$CONTAINER_NAME") ]]; then
@@ -15,9 +13,11 @@ if [[ -n $(docker ps -a | grep "$CONTAINER_NAME") ]]; then
 fi
 
 # create the image
-docker build -t $IMG_NAME --build-arg USERNAME=$USERNAME .
+docker build \
+    -t $IMG_NAME \
+    --build-arg USERNAME=$USERNAME RPI_BOARD_NAME=$RPI_BOARD_NAME .
 
 # create the container
 docker create -it --privileged \
-    --mount type=bind,source="$PWD",target=$PROJECT_DIR \
+    --mount type=bind,source="$PWD",target=$RPI_ELINUX_ROOT \
     --name $CONTAINER_NAME $IMG_NAME

@@ -8,7 +8,7 @@ on a Raspberry Pi.
 * The `br2-external` directory contains an example of developing a buildroot-
     based system out-of-tree.
 
-### Setup
+### Setup the development environment
 
 The repo provides a `Dockerfile` that mounts the container in a way that makes
 it available to the host and provides a development environment.

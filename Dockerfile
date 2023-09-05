@@ -1,6 +1,6 @@
 FROM ubuntu:22.04
 
-ARG USERNAME
+ARG USERNAME="user"
 
 # Set non-interactive frontend for apt-get to skip any user confirmations
 ENV DEBIAN_FRONTEND=noninteractive
@@ -65,32 +65,28 @@ RUN apt-get clean && apt-get update && apt-get install -y \
     mesa-common-dev \
     zstd \
     liblz4-tool \
-    bmap-tools
+    bmap-tools \
+    kas
 
 RUN useradd --shell=/bin/bash --create-home $USERNAME
 RUN echo "$USERNAME ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers
+
+USER $USERNAME
 
 RUN locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-ENV RPI_ELINUX_ROOT="/home/$USERNAME/rpi-elinux"
+ENV HOME="/home/$USERNAME"
+ENV PATH="$HOME/.local/bin:$PATH"
+ENV RPI_ELINUX_ROOT="$HOME/rpi-elinux"
 
-# Possible values: rpi0w rpi3b ...
-ENV RPI_BOARD_NAME="rpi0w"
+RUN mkdir -p $RPI_ELINUX_ROOT
+WORKDIR $RPI_ELINUX_ROOT
 
-ENV BR2_EXTERNAL="/home/$USERNAME/rpi-elinux/br/br2-external"
-
-ENV BB_ENV_PASSTHROUGH_ADDITIONS="DL_DIR SSTATE_DIR TEMPLATECONF RPI_ELINUX_ROOT"
-ENV SSTATE_DIR="$RPI_ELINUX_ROOT/yocto/cache/sstate-cache"
-ENV DL_DIR="$RPI_ELINUX_ROOT/yocto/cache/downloads"
-ENV TEMPLATECONF="$RPI_ELINUX_ROOT/yocto/sources/meta-raspberrypi-custom/conf/templates/$RPI_BOARD_NAME-template"
+# Buildroot
+ENV BR2_EXTERNAL="$RPI_ELINUX_ROOT/br/br2-external"
 
 # Enable man pages and help messages
 RUN yes | unminimize
-
-USER $USERNAME
-WORKDIR /home/$USERNAME
-
-RUN mkdir -p rpi-elinux
