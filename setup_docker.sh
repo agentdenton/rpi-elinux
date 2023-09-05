@@ -13,9 +13,7 @@ if [[ -n $(docker ps -a | grep "$CONTAINER_NAME") ]]; then
 fi
 
 # create the image
-docker build \
-    -t $IMG_NAME \
-    --build-arg USERNAME=$USERNAME RPI_BOARD_NAME=$RPI_BOARD_NAME .
+docker build -t $IMG_NAME --build-arg USERNAME=$USERNAME .
 
 # create the container
 docker create -it --privileged \

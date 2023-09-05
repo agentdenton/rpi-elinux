@@ -71,12 +71,15 @@ RUN apt-get clean && apt-get update && apt-get install -y \
 RUN useradd --shell=/bin/bash --create-home $USERNAME
 RUN echo "$USERNAME ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers
 
-USER $USERNAME
-
 RUN locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
+
+# Enable man pages and help messages
+RUN yes | unminimize
+
+USER $USERNAME
 
 ENV HOME="/home/$USERNAME"
 ENV PATH="$HOME/.local/bin:$PATH"
@@ -85,8 +88,8 @@ ENV RPI_ELINUX_ROOT="$HOME/rpi-elinux"
 RUN mkdir -p $RPI_ELINUX_ROOT
 WORKDIR $RPI_ELINUX_ROOT
 
+# Yocto
+ENV BB_ENV_PASSTHROUGH_ADDITIONS="RPI_ELINUX_ROOT"
+
 # Buildroot
 ENV BR2_EXTERNAL="$RPI_ELINUX_ROOT/br/br2-external"
-
-# Enable man pages and help messages
-RUN yes | unminimize

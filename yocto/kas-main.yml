@@ -28,6 +28,3 @@ local_conf_header:
   meta-custom: |
     ENABLE_UART = "1"
     RPI_USE_U_BOOT = "1"
-    SSTATE_DIR="cache/sstate-cache"
-    DL_DIR="cache/downloads"
-

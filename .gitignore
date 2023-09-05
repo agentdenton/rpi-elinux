@@ -17,6 +17,7 @@ ssh_host_rsa_key.pub
 .viminfo
 .cache
 
+build
 cache
 downloads
 sstate-cache
