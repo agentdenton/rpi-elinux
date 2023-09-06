@@ -1,8 +1,7 @@
-override CFLAGS += -std=c18 -Wall
-override LDFLAGS +=
+CFLAGS += -std=c18 -Wall
 
 BUILDDIR := build
-TARGET := rpi0w-led
+TARGET := rpi-led
 
 SOURCES := main.c
 OBJECTS := $(addprefix $(BUILDDIR)/, $(SOURCES:.c=.o))
