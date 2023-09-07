@@ -11,6 +11,7 @@ RUN apt-get clean && apt-get update && apt-get install -y \
     sudo \
     make \
     help2man \
+    man \
     unzip \
     git \
     wget \
@@ -83,6 +84,11 @@ USER $USERNAME
 
 ENV HOME="/home/$USERNAME"
 ENV PATH="$HOME/.local/bin:$PATH"
+
+# Even though Kas exports this variable to BitBake during the build process,
+# sometimes I prefer to source 'pokey/oe-init-build-env' directly when
+# developing recipes. So, to be safe, I still need to export this as an
+# environment variable.
 ENV RPI_ELINUX_ROOT="$HOME/rpi-elinux"
 
 RUN mkdir -p $RPI_ELINUX_ROOT

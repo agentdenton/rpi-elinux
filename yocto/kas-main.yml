@@ -5,6 +5,10 @@ distro: poky
 machine: raspberrypi0-wifi
 target: rpi0w-custom-dev
 
+env:
+  RPI_ELINUX_ROOT: "$HOME/rpi-elinux"
+  BB_ENV_PASSTHROUGH_ADDITIONS: "RPI_ELINUX_ROOT"
+
 repos:
   poky:
     url: https://github.com/yoctoproject/poky.git
@@ -28,3 +32,4 @@ local_conf_header:
   meta-custom: |
     ENABLE_UART = "1"
     RPI_USE_U_BOOT = "1"
+    EXTRA_IMAGE_FEATURES = "debug-tweaks"
