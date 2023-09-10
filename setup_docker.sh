@@ -6,6 +6,11 @@ CONTAINER_NAME="rpi-elinux"
 USERNAME="rpi"
 RPI_ELINUX_ROOT="/home/$USERNAME/rpi-elinux"
 
+# Setup buildroot
+buildroot_branch="2023.08.x"
+git submodule update --init --recursive
+git -C br/buildroot switch $buildroot_branch
+
 # remove previously created images
 if [[ -n $(docker ps -a | grep "$CONTAINER_NAME") ]]; then
     docker rm "$CONTAINER_NAME" || true
