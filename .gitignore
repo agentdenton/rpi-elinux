@@ -17,13 +17,12 @@ ssh_host_rsa_key.pub
 .viminfo
 .cache
 
+layers
+
 build
 cache
 downloads
 sstate-cache
-
-poky
-meta-raspberrypi
 
 *.log
 *-build

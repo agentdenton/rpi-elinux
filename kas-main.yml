@@ -1,13 +1,9 @@
 header:
-  version: 8
+  version: 11
 
-distro: poky
+distro: rpidev
 machine: raspberrypi0-wifi
-target: rpi0w-custom-dev
-
-env:
-  RPI_ELINUX_ROOT: "$HOME/rpi-elinux"
-  BB_ENV_PASSTHROUGH_ADDITIONS: "RPI_ELINUX_ROOT"
+target: rpi-image-dev
 
 repos:
   poky:
@@ -25,11 +21,10 @@ repos:
     refspec: mickledore
     path: layers/meta-raspberrypi
   meta-raspberrypi-custom:
-    path: layers/meta-raspberrypi-custom
-    refspec: mickledore
+    path: layers/meta-raspberrypi-extra
+    refspec: main
+    url: https://github.com/agentdenton/meta-raspberrypi-extra.git
 
 local_conf_header:
-  meta-custom: |
-    ENABLE_UART = "1"
-    RPI_USE_U_BOOT = "1"
-    EXTRA_IMAGE_FEATURES = "debug-tweaks"
+  rpi-elinux: |
+    EXTRA_IMAGE_FEATURES += "debug-tweaks"

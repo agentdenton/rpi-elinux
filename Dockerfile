@@ -1,6 +1,7 @@
 FROM ubuntu:22.04
 
-ARG USERNAME="user"
+ARG CONTAINER_USERNAME
+ARG WORKDIR_PATH
 
 # Set non-interactive frontend for apt-get to skip any user confirmations
 ENV DEBIAN_FRONTEND=noninteractive
@@ -66,36 +67,26 @@ RUN apt-get clean && apt-get update && apt-get install -y \
     mesa-common-dev \
     zstd \
     liblz4-tool \
+    tmux \
     bmap-tools \
+    mtools \
+    parted \
     kas
 
-RUN useradd --shell=/bin/bash --create-home $USERNAME
-RUN echo "$USERNAME ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers
+RUN useradd --shell=/bin/bash --create-home $CONTAINER_USERNAME
+RUN echo "$CONTAINER_USERNAME ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers
 
 RUN locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-# Enable man pages and help messages
-RUN yes | unminimize
+USER $CONTAINER_USERNAME
 
-USER $USERNAME
+RUN mkdir -p $WORKDIR_PATH
+WORKDIR $WORKDIR_PATH
 
-ENV HOME="/home/$USERNAME"
+ENV HOME="/home/$CONTAINER_USERNAME"
 ENV PATH="$HOME/.local/bin:$PATH"
 
-# Even though Kas exports this variable to BitBake during the build process,
-# sometimes I prefer to source 'pokey/oe-init-build-env' directly when
-# developing recipes. So, to be safe, I still need to export this as an
-# environment variable.
-ENV RPI_ELINUX_ROOT="$HOME/rpi-elinux"
-
-RUN mkdir -p $RPI_ELINUX_ROOT
-WORKDIR $RPI_ELINUX_ROOT
-
-# Yocto
-ENV BB_ENV_PASSTHROUGH_ADDITIONS="RPI_ELINUX_ROOT"
-
-# Buildroot
-ENV BR2_EXTERNAL="$RPI_ELINUX_ROOT/br/br2-external"
+CMD ["/bin/bash"]
