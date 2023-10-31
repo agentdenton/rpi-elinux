@@ -1,4 +1,0 @@
-config BR2_PACKAGE_BMP280_I2C
-	bool "bmp280-i2c"
-	help
-	  Driver for the BMP280 pressure and temperature sensor
