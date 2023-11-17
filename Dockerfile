@@ -1,7 +1,11 @@
 FROM ubuntu:22.04
 
-ARG CONTAINER_USERNAME
-ARG WORKDIR_PATH
+ARG USERNAME
+ARG WORKDIR
+
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
 
 # Set non-interactive frontend for apt-get to skip any user confirmations
 ENV DEBIAN_FRONTEND=noninteractive
@@ -11,8 +15,6 @@ RUN apt-get clean && apt-get update && apt-get install -y \
     vim \
     sudo \
     make \
-    help2man \
-    man \
     unzip \
     git \
     wget \
@@ -71,22 +73,32 @@ RUN apt-get clean && apt-get update && apt-get install -y \
     bmap-tools \
     mtools \
     parted \
-    kas
-
-RUN useradd --shell=/bin/bash --create-home $CONTAINER_USERNAME
-RUN echo "$CONTAINER_USERNAME ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers
+    kas \
+    openssh-server
 
 RUN locale-gen en_US.UTF-8
-ENV LANG=en_US.UTF-8
-ENV LANGUAGE=en_US:en
-ENV LC_ALL=en_US.UTF-8
 
-USER $CONTAINER_USERNAME
+RUN useradd --shell=/bin/bash --create-home $USERNAME
+RUN echo "$USERNAME ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers
 
-RUN mkdir -p $WORKDIR_PATH
-WORKDIR $WORKDIR_PATH
+RUN mkdir -p $WORKDIR
+RUN mkdir -p /run/sshd
+RUN mkdir -p /home/$USERNAME/.ssh
 
-ENV HOME="/home/$CONTAINER_USERNAME"
-ENV PATH="$HOME/.local/bin:$PATH"
+COPY scripts/startup.sh /usr/local/bin
+COPY configs/ssh_config /home/$USERNAME/.ssh/config
+
+RUN ssh-keygen -A -v
+
+RUN sed -i 's/%USERNAME%/'"$USERNAME"'/g' /home/$USERNAME/.ssh/config
+
+RUN chown -R $USERNAME:$USERNAME /run
+RUN chown -R $USERNAME:$USERNAME /etc/ssh
+RUN chown -R $USERNAME:$USERNAME /home/$USERNAME/.ssh
+RUN chown $USERNAME:$USERNAME /usr/local/bin/startup.sh
+
+USER $USERNAME
+
+WORKDIR $WORKDIR
 
 CMD ["/bin/bash"]
