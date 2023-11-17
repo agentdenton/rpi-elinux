@@ -1,0 +1,11 @@
+header:
+  version: 11
+  includes:
+    - base.yml
+
+machine: raspberrypi3
+
+local_conf_header:
+  default: |
+    ENABLE_UART = "1"
+    RPI_USE_U_BOOT = "1"

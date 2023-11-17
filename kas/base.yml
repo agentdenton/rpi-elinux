@@ -2,7 +2,6 @@ header:
   version: 11
 
 distro: rpidev
-machine: raspberrypi0-wifi
 target: rpi-image-dev
 
 repos:
@@ -20,11 +19,7 @@ repos:
     url: https://github.com/agherzan/meta-raspberrypi.git
     refspec: mickledore
     path: layers/meta-raspberrypi
-  meta-raspberrypi-custom:
-    path: layers/meta-raspberrypi-extra
+  meta-raspberrypi-extras:
+    path: layers/meta-raspberrypi-extras
     refspec: main
-    url: https://github.com/agentdenton/meta-raspberrypi-extra.git
-
-local_conf_header:
-  rpi-elinux: |
-    EXTRA_IMAGE_FEATURES += "debug-tweaks"
+    url: https://github.com/agentdenton/meta-raspberrypi-extras.git
