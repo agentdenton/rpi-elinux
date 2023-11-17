@@ -1,11 +1,10 @@
-authorized_keys
-moduli
-ssh_host_ecdsa_key
-ssh_host_ecdsa_key.pub
-ssh_host_ed25519_key
-ssh_host_ed25519_key.pub
-ssh_host_rsa_key
-ssh_host_rsa_key.pub
+layers
+rpi-secrets
+
+build
+cache
+downloads
+sstate-cache
 
 .buildroot-ccache
 .subversion
@@ -16,13 +15,6 @@ ssh_host_rsa_key.pub
 .bashrc
 .viminfo
 .cache
-
-layers
-
-build
-cache
-downloads
-sstate-cache
 
 *.log
 *-build
