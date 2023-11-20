@@ -3,6 +3,8 @@ FROM ubuntu:22.04
 ARG USERNAME
 ARG WORKDIR
 
+ENV WORKDIR $WORKDIR
+
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
@@ -100,9 +102,10 @@ RUN ssh-keygen -A -v
 
 RUN sed -i 's/%USERNAME%/'"$USERNAME"'/g' /home/$USERNAME/.ssh/config
 
+RUN python3 -m venv /opt/venv
+RUN . /opt/venv/bin/activate && pip3 install kas
 
 USER $USERNAME
-
 WORKDIR $WORKDIR
 
-CMD ["/bin/bash"]
+CMD ["/usr/local/bin/startup.sh"]
