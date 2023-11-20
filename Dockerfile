@@ -85,17 +85,21 @@ RUN mkdir -p $WORKDIR
 RUN mkdir -p /run/sshd
 RUN mkdir -p /home/$USERNAME/.ssh
 
+RUN chown -R $USERNAME:$USERNAME /run
+RUN chown -R $USERNAME:$USERNAME /etc/ssh
+
 COPY scripts/startup.sh /usr/local/bin
+COPY configs/bashrc /home/$USERNAME/.bashrc
 COPY configs/ssh_config /home/$USERNAME/.ssh/config
+
+COPY --chown=$USERNAME:$USERNAME scripts/startup.sh /usr/local/bin
+COPY --chown=$USERNAME:$USERNAME configs/bashrc /home/$USERNAME/.bashrc
+COPY --chown=$USERNAME:$USERNAME configs/ssh_config /home/$USERNAME/.ssh/config
 
 RUN ssh-keygen -A -v
 
 RUN sed -i 's/%USERNAME%/'"$USERNAME"'/g' /home/$USERNAME/.ssh/config
 
-RUN chown -R $USERNAME:$USERNAME /run
-RUN chown -R $USERNAME:$USERNAME /etc/ssh
-RUN chown -R $USERNAME:$USERNAME /home/$USERNAME/.ssh
-RUN chown $USERNAME:$USERNAME /usr/local/bin/startup.sh
 
 USER $USERNAME
 
