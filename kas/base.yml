@@ -23,3 +23,7 @@ repos:
     path: layers/meta-raspberrypi-extras
     refspec: main
     url: https://github.com/agentdenton/meta-raspberrypi-extras.git
+
+local_conf_header:
+  dist-common: |
+    PACKAGE_CLASSES = "package_ipk"
