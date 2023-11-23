@@ -88,11 +88,8 @@ RUN mkdir -p /run/sshd
 RUN mkdir -p /home/$USERNAME/.ssh
 
 RUN chown -R $USERNAME:$USERNAME /run
+RUN chown -R $USERNAME:$USERNAME /opt
 RUN chown -R $USERNAME:$USERNAME /etc/ssh
-
-COPY scripts/startup.sh /usr/local/bin
-COPY configs/bashrc /home/$USERNAME/.bashrc
-COPY configs/ssh_config /home/$USERNAME/.ssh/config
 
 COPY --chown=$USERNAME:$USERNAME scripts/startup.sh /usr/local/bin
 COPY --chown=$USERNAME:$USERNAME configs/bashrc /home/$USERNAME/.bashrc
