@@ -35,6 +35,7 @@ cp_ssh_keys() {
 
     docker cp $HOME/.ssh/github $CONTAINER_NAME:/home/$USERNAME/.ssh
     docker cp $HOME/.ssh/github.pub $CONTAINER_NAME:/home/$USERNAME/.ssh
+    docker cp $HOME/.ssh/known_hosts $CONTAINER_NAME:/home/$USERNAME/.ssh
 
     docker stop $CONTAINER_NAME
 }
