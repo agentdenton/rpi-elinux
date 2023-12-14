@@ -1,11 +1,11 @@
 header:
-  version: 11
+  version: 14
   includes:
     - base.yml
 
 machine: raspberrypi0-wifi
 
 local_conf_header:
-  default: |
+  rpi0w_flags: |
     ENABLE_UART = "1"
     RPI_USE_U_BOOT = "1"

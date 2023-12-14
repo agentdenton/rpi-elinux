@@ -1,5 +1,5 @@
 header:
-  version: 11
+  version: 14
 
 distro: rpidev
 target: rpi-image-dev
@@ -25,5 +25,5 @@ repos:
     url: https://github.com/agentdenton/meta-raspberrypi-extras.git
 
 local_conf_header:
-  dist-common: |
+  common_flags: |
     PACKAGE_CLASSES = "package_ipk"
