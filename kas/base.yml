@@ -7,7 +7,7 @@ target: rpi-image-dev
 repos:
   poky:
     url: https://github.com/yoctoproject/poky.git
-    refspec: mickledore
+    branch: mickledore
     path: layers/poky
     layers:
       meta:
@@ -17,12 +17,16 @@ repos:
       meta-skeleton:
   meta-raspberrypi:
     url: https://github.com/agherzan/meta-raspberrypi.git
-    refspec: mickledore
+    branch: mickledore
     path: layers/meta-raspberrypi
   meta-raspberrypi-extras:
     path: layers/meta-raspberrypi-extras
-    refspec: main
+    branch: main
     url: https://github.com/agentdenton/meta-raspberrypi-extras.git
+  meta-raspberrypi-secrets:
+    path: layers/meta-raspberrypi-secrets
+    branch: main
+    url: git@github.com:agentdenton/meta-raspberrypi-secrets.git
 
 local_conf_header:
   common_flags: |
