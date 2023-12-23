@@ -1,8 +1,10 @@
 #!/bin/bash -eu
 
 USERNAME="rpi"
+
 CONTAINER_NAME="rpi-elinux"
 CONTAINER_IMG_NAME="rpi-elinux-img"
+
 MNT_DIR="/home/$USERNAME/rpi-dev"
 
 create_container() {
@@ -29,14 +31,19 @@ remove_container() {
     fi
 }
 
-# NOTE: Can't copy keys inside the Dockerfile from $HOME, so do it here
-cp_ssh_keys() {
+setup_container() {
+    remove_container # Remove the previous container before creating a new one.
+    create_container
+
+    # START
     docker start $CONTAINER_NAME
 
+    # Copy github host ssh keys to the container
     docker cp $HOME/.ssh/github $CONTAINER_NAME:/home/$USERNAME/.ssh
     docker cp $HOME/.ssh/github.pub $CONTAINER_NAME:/home/$USERNAME/.ssh
     docker cp $HOME/.ssh/known_hosts $CONTAINER_NAME:/home/$USERNAME/.ssh
 
+    # END
     docker stop $CONTAINER_NAME
 }
 
@@ -45,10 +52,4 @@ trap_handler() {
 }
 trap "echo 'Stopping...'; trap_handler" INT ERR
 
-# Remove the previous container before creating a new one.
-remove_container
-
-create_container
-
-# Copy github host ssh keys to the container
-cp_ssh_keys
+setup_container
