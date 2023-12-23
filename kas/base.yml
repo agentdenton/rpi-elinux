@@ -6,19 +6,28 @@ target: rpi-image-dev
 
 repos:
   poky:
-    url: https://github.com/yoctoproject/poky.git
-    branch: mickledore
     path: layers/poky
+    branch: mickledore
+    url: https://github.com/yoctoproject/poky.git
     layers:
       meta:
       meta-poky:
       meta-yocto-bsp:
       meta-selftest:
       meta-skeleton:
-  meta-raspberrypi:
-    url: https://github.com/agherzan/meta-raspberrypi.git
+  meta-openembedded:
+    path: layers/meta-openembedded
     branch: mickledore
+    url: https://github.com/openembedded/meta-openembedded.git
+    layers:
+      meta-oe:
+      meta-python:
+      meta-multimedia:
+      meta-networking:
+  meta-raspberrypi:
     path: layers/meta-raspberrypi
+    branch: mickledore
+    url: https://github.com/agherzan/meta-raspberrypi.git
   meta-raspberrypi-extras:
     path: layers/meta-raspberrypi-extras
     branch: main
