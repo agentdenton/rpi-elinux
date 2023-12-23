@@ -76,7 +76,8 @@ RUN apt-get clean && apt-get update && apt-get install -y \
     mtools \
     parted \
     kas \
-    openssh-server
+    openssh-server \
+    iproute2
 
 RUN locale-gen en_US.UTF-8
 
