@@ -3,3 +3,9 @@ Host github.com
   Hostname github.com
   PreferredAuthentications publickey
   IdentityFile /home/%USERNAME%/.ssh/github
+
+Host rpi0w
+  User root
+  Hostname 192.168.50.101
+  PreferredAuthentications publickey
+  IdentityFile /home/%USERNAME%/.ssh/rpi0w
